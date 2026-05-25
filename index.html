@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spain 2026 Trip Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Trip dashboard</p>
+        <h1 id="trip-title">Spain 2026</h1>
+        <p id="trip-subtitle" class="subtitle">Loading itinerary...</p>
+      </div>
+      <div class="header-actions">
+        <a class="button" href="https://www.openstreetmap.org/search?query=Spain" target="_blank" rel="noreferrer">Map</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="main-column" aria-label="Trip timeline">
+        <section class="overview" aria-label="Trip overview">
+          <div class="metric">
+            <span class="metric-label">Dates</span>
+            <strong id="date-range">Aug 10-19, 2026</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Route</span>
+            <strong id="route-summary">MSP to Madrid and back</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Next</span>
+            <strong id="next-item">Loading</strong>
+          </div>
+        </section>
+
+        <section class="filters" aria-label="Timeline filters">
+          <label>
+            <span>City</span>
+            <select id="city-filter"></select>
+          </label>
+          <label>
+            <span>Type</span>
+            <select id="type-filter">
+              <option value="all">All types</option>
+              <option value="transport">Transport</option>
+              <option value="lodging">Lodging</option>
+              <option value="stop">Stops</option>
+              <option value="wishlist">Wishlist</option>
+            </select>
+          </label>
+          <label>
+            <span>Date</span>
+            <select id="date-filter"></select>
+          </label>
+          <div class="toggles" aria-label="Quick filters">
+            <label class="check">
+              <input id="wishlist-filter" type="checkbox">
+              <span>Wishlist only</span>
+            </label>
+            <label class="check">
+              <input id="upcoming-filter" type="checkbox">
+              <span>Upcoming</span>
+            </label>
+          </div>
+        </section>
+
+        <div id="status-message" class="status-message" hidden></div>
+        <section id="timeline" class="timeline" aria-live="polite"></section>
+      </section>
+
+      <aside class="side-column" aria-label="Route and actions">
+        <section class="panel prep-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Sync</p>
+            <h2>Private Editing</h2>
+          </div>
+          <p id="sync-status" class="small-copy">Local-only until Supabase is configured.</p>
+          <form id="signin-form" class="auth-form">
+            <input id="signin-email" type="email" placeholder="Email" autocomplete="email" aria-label="Email">
+            <input id="signin-password" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
+            <button class="icon-button" type="submit">Sign in</button>
+          </form>
+          <button id="signout-button" class="icon-button ghost-action" type="button" hidden>Sign out</button>
+        </section>
+
+        <section id="packing-panel" class="panel prep-panel" data-private-content>
+          <div class="panel-heading">
+            <p class="eyebrow">Before</p>
+            <h2>Packing</h2>
+          </div>
+          <div id="packing-lists" class="task-sections"></div>
+          <form id="packing-form" class="add-form">
+            <select id="packing-person" aria-label="Packing list person"></select>
+            <input id="packing-text" type="text" placeholder="Add packing item" aria-label="Packing item">
+            <button class="icon-button" type="submit">Add</button>
+          </form>
+        </section>
+
+        <section id="todo-panel" class="panel prep-panel" data-private-content>
+          <div class="panel-heading">
+            <p class="eyebrow">Before</p>
+            <h2>To-Do</h2>
+          </div>
+          <div id="todo-lists" class="task-sections"></div>
+          <form id="todo-form" class="add-form">
+            <select id="todo-person" aria-label="To-do person"></select>
+            <input id="todo-text" type="text" placeholder="Add to-do item" aria-label="To-do item">
+            <button class="icon-button" type="submit">Add</button>
+          </form>
+        </section>
+
+        <section class="panel prep-panel" data-share-content>
+          <div class="panel-heading">
+            <p class="eyebrow">Ideas</p>
+            <h2>Bucket List</h2>
+          </div>
+          <div id="bucket-list" class="task-sections"></div>
+          <form id="bucket-form" class="add-form">
+            <select id="bucket-city" aria-label="Bucket list city"></select>
+            <input id="bucket-text" type="text" placeholder="Add city idea" aria-label="Bucket list item">
+            <button class="icon-button" type="submit">Add</button>
+          </form>
+        </section>
+
+      </aside>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js?v=20260525"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js?v=20260525"></script>
+  </body>
+</html>
