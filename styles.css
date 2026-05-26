@@ -716,7 +716,7 @@ code {
   .site-header {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 30;
     align-items: flex-start;
     padding-block: 16px 12px;
   }
@@ -727,8 +727,8 @@ code {
 
   .mobile-nav {
     position: sticky;
-    top: 92px;
-    z-index: 18;
+    top: 84px;
+    z-index: 29;
     margin-bottom: 14px;
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -834,6 +834,10 @@ code {
   .site-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .mobile-nav {
+    top: 138px;
   }
 
   .overview,
