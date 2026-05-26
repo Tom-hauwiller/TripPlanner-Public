@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Spain 2026 Trip Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260526">
   </head>
   <body>
     <header class="site-header">
       <div>
         <p class="eyebrow">Trip dashboard</p>
         <h1 id="trip-title">Spain 2026</h1>
-        <p id="trip-subtitle" class="subtitle">Loading itinerary...</p>
       </div>
       <div class="header-actions">
         <a class="button" href="https://www.openstreetmap.org/search?query=Spain" target="_blank" rel="noreferrer">Map</a>
@@ -21,21 +20,6 @@
 
     <main class="layout">
       <section class="main-column" aria-label="Trip timeline">
-        <section class="overview" aria-label="Trip overview">
-          <div class="metric">
-            <span class="metric-label">Dates</span>
-            <strong id="date-range">Aug 10-19, 2026</strong>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Route</span>
-            <strong id="route-summary">MSP to Madrid and back</strong>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Next</span>
-            <strong id="next-item">Loading</strong>
-          </div>
-        </section>
-
         <section class="filters" aria-label="Timeline filters">
           <label>
             <span>City</span>
@@ -68,6 +52,8 @@
         </section>
 
         <div id="status-message" class="status-message" hidden></div>
+        <section id="mobile-nav" class="mobile-nav" aria-label="Trip navigation"></section>
+        <section id="mobile-content" class="mobile-content" aria-live="polite"></section>
         <section id="timeline" class="timeline" aria-live="polite"></section>
       </section>
 
@@ -131,6 +117,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20260525"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="app.js?v=20260525"></script>
+    <script src="app.js?v=20260526"></script>
   </body>
 </html>

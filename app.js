@@ -36,6 +36,13 @@ const state = {
     date: "all",
     wishlistOnly: false,
     upcomingOnly: false
+  },
+  mobileNav: {
+    view: "home",
+    date: null,
+    prepList: null,
+    person: null,
+    city: null
   }
 };
 
@@ -44,10 +51,12 @@ let routeMapCounter = 0;
 
 const els = {
   title: document.querySelector("#trip-title"),
-  subtitle: document.querySelector("#trip-subtitle"),
-  dateRange: document.querySelector("#date-range"),
-  routeSummary: document.querySelector("#route-summary"),
-  nextItem: document.querySelector("#next-item"),
+  subtitle: document.querySelector("#trip-subtitle") || { textContent: "" },
+  dateRange: document.querySelector("#date-range") || { textContent: "" },
+  routeSummary: document.querySelector("#route-summary") || { textContent: "" },
+  nextItem: document.querySelector("#next-item") || { textContent: "" },
+  mobileNav: document.querySelector("#mobile-nav"),
+  mobileContent: document.querySelector("#mobile-content"),
   cityFilter: document.querySelector("#city-filter"),
   typeFilter: document.querySelector("#type-filter"),
   dateFilter: document.querySelector("#date-filter"),
@@ -89,6 +98,7 @@ async function init() {
   await initSupabaseSync();
   applyVisibilityMode();
   bindFilters();
+  bindMobileNav();
   bindPrepForms();
   bindAuthControls();
   populateStaticSections();
@@ -106,6 +116,7 @@ function normalizeData(data) {
 }
 
 function bindFilters() {
+  if (!els.cityFilter || !els.typeFilter || !els.dateFilter) return;
   els.cityFilter.addEventListener("change", () => {
     state.filters.city = els.cityFilter.value;
     render();
@@ -126,6 +137,11 @@ function bindFilters() {
     state.filters.upcomingOnly = els.upcomingFilter.checked;
     render();
   });
+}
+
+function bindMobileNav() {
+  els.mobileNav?.addEventListener("click", handleMobileNavClick);
+  els.mobileContent?.addEventListener("click", handleMobileNavClick);
 }
 
 function bindPrepForms() {
@@ -192,6 +208,7 @@ function populateStaticSections() {
 }
 
 function populateSelect(select, label, values, labeler = (value) => value) {
+  if (!select) return;
   select.innerHTML = "";
   select.append(new Option(label, "all"));
   values.forEach((value) => select.append(new Option(labeler(value), value)));
@@ -200,6 +217,7 @@ function populateSelect(select, label, values, labeler = (value) => value) {
 function render() {
   const filtered = filteredItems();
   renderTimeline(groupByDate(filtered));
+  renderMobileNavigation();
 }
 
 function filteredItems() {
@@ -240,6 +258,215 @@ function renderTimeline(groups) {
     group.append(list);
     els.timeline.append(group);
   });
+}
+
+function handleMobileNavClick(event) {
+  const control = event.target.closest("[data-mobile-view]");
+  if (!control) return;
+  event.preventDefault();
+  state.mobileNav = {
+    view: control.dataset.mobileView,
+    date: control.dataset.mobileDate || null,
+    prepList: control.dataset.mobilePrepList || null,
+    person: control.dataset.mobilePerson || null,
+    city: control.dataset.mobileCity || null
+  };
+  renderMobileNavigation();
+  els.mobileNav?.scrollIntoView({ block: "start" });
+}
+
+function renderMobileNavigation() {
+  if (!els.mobileNav || !els.mobileContent) return;
+  renderMobileBreadcrumbs();
+  els.mobileContent.innerHTML = "";
+
+  const { view } = state.mobileNav;
+  if (view === "prep") renderMobilePrep();
+  else if (view === "schedule") renderMobileSchedule();
+  else if (view === "day") renderMobileDay();
+  else if (view === "bucket") renderMobileBucket();
+  else if (view === "bucketCity") renderMobileBucketCity();
+  else renderMobileHome();
+}
+
+function renderMobileBreadcrumbs() {
+  const trail = [{ label: "Home", view: "home" }];
+  const { view, date, prepList, person, city } = state.mobileNav;
+  if (["prep"].includes(view)) trail.push({ label: "Pre-Departure", view: "prep" });
+  if (view === "schedule" || view === "day") trail.push({ label: "Daily Schedule", view: "schedule" });
+  if (view === "day" && date) trail.push({ label: formatMobileDate(date), view: "day", date });
+  if (view === "bucket" || view === "bucketCity") trail.push({ label: "What Else To Do?", view: "bucket" });
+  if (view === "bucketCity" && city) trail.push({ label: city, view: "bucketCity", city });
+  if (view === "prep" && prepList) {
+    const label = prepList === "todos" ? "To-Do" : `${personName(person)} Packing`;
+    trail.push({ label, view: "prep", prepList, person });
+  }
+
+  els.mobileNav.innerHTML = "";
+  const crumbs = document.createElement("div");
+  crumbs.className = "breadcrumbs";
+  trail.forEach((crumb, index) => {
+    const isLast = index === trail.length - 1;
+    const crumbEl = document.createElement(isLast ? "span" : "button");
+    crumbEl.className = isLast ? "breadcrumb current" : "breadcrumb";
+    crumbEl.textContent = crumb.label;
+    if (!isLast) applyMobileDataset(crumbEl, crumb);
+    crumbs.append(crumbEl);
+    if (!isLast) {
+      const sep = document.createElement("span");
+      sep.className = "breadcrumb-separator";
+      sep.textContent = ">";
+      crumbs.append(sep);
+    }
+  });
+  els.mobileNav.append(crumbs);
+  if (state.session) {
+    const auth = document.createElement("div");
+    auth.className = "mobile-auth-row";
+    const role = document.createElement("span");
+    role.textContent = state.canEdit ? "Traveler" : "Guest";
+    auth.append(role);
+    auth.append(button("Sign out", async () => {
+      if (state.supabase) await state.supabase.auth.signOut();
+    }));
+    els.mobileNav.append(auth);
+  }
+}
+
+function renderMobileHome() {
+  const group = mobileButtonGroup();
+  group.append(
+    mobileNavButton("Pre-Departure", { view: "prep" }),
+    mobileNavButton("Daily Schedule", { view: "schedule" }),
+    mobileNavButton("What Else To Do?", { view: "bucket" })
+  );
+  els.mobileContent.append(group);
+}
+
+function renderMobilePrep() {
+  const group = mobileButtonGroup();
+  group.append(mobileNavButton("To-Do", { view: "prep", prepList: "todos" }));
+  personOptions()
+    .filter((person) => person.id !== "shared")
+    .forEach((person) => group.append(mobileNavButton(`${person.name} Packing`, {
+      view: "prep",
+      prepList: "packing",
+      person: person.id
+    })));
+  els.mobileContent.append(group);
+
+  const { prepList, person } = state.mobileNav;
+  if (!prepList) return;
+  const title = prepList === "todos" ? "To-Do" : `${personName(person)} Packing`;
+  const items = mobilePrepItems(prepList, person);
+  els.mobileContent.append(renderTaskSection(title, items, prepList));
+  if (state.canEdit) els.mobileContent.append(renderMobilePrepForm(prepList, person));
+}
+
+function renderMobileSchedule() {
+  const groups = groupByDate(allItineraryItems().sort(compareItems));
+  const dates = Object.keys(groups).sort();
+  const group = mobileButtonGroup();
+  dates.forEach((date) => {
+    group.append(mobileNavButton(formatMobileDate(date), { view: "day", date }, `${groups[date].length} items`));
+  });
+  els.mobileContent.append(group);
+}
+
+function renderMobileDay() {
+  const date = state.mobileNav.date;
+  const items = allItineraryItems()
+    .filter((item) => dateKey(item.start) === date)
+    .sort(compareItems);
+  if (!items.length) {
+    els.mobileContent.append(emptyState("No itinerary items for this date."));
+    return;
+  }
+  const group = document.createElement("article");
+  group.className = "day-group mobile-day-detail";
+  const list = document.createElement("div");
+  list.className = "item-list";
+  items.forEach((item) => list.append(renderItem(item)));
+  group.append(list);
+  els.mobileContent.append(group);
+}
+
+function renderMobileBucket() {
+  const group = mobileButtonGroup();
+  orderedBucketCities().forEach((city) => {
+    const count = state.prep.bucketList.filter((item) => item.city === city).length;
+    group.append(mobileNavButton(city, { view: "bucketCity", city }, `${count} ideas`));
+  });
+  els.mobileContent.append(group);
+}
+
+function renderMobileBucketCity() {
+  const city = state.mobileNav.city;
+  const items = state.prep.bucketList.filter((item) => item.city === city);
+  els.mobileContent.append(renderTaskSection(city || "Ideas", items, "bucketList"));
+  if (state.canEdit) els.mobileContent.append(renderMobilePrepForm("bucketList", null, city));
+}
+
+function renderMobilePrepForm(listName, person, city) {
+  const form = document.createElement("form");
+  form.className = "add-form mobile-add-form";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = listName === "bucketList" ? "Add city idea" : `Add ${listName === "todos" ? "to-do" : "packing"} item`;
+  input.setAttribute("aria-label", input.placeholder);
+  const submit = document.createElement("button");
+  submit.className = "icon-button";
+  submit.type = "submit";
+  submit.textContent = "Add";
+  form.append(input, submit);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    if (listName === "bucketList") addPrepItem(listName, { city, text });
+    else addPrepItem(listName, { person: listName === "todos" ? "shared" : person, text });
+    input.value = "";
+  });
+  return form;
+}
+
+function mobilePrepItems(listName, person) {
+  const cutoffPassed = beforeCutoffPassed();
+  const source = listName === "todos" ? state.prep.todos : state.prep.packing.filter((item) => item.person === person);
+  return cutoffPassed ? source.filter((item) => !item.done) : source;
+}
+
+function mobileButtonGroup() {
+  const group = document.createElement("div");
+  group.className = "mobile-button-group";
+  return group;
+}
+
+function mobileNavButton(label, target, meta = "") {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "mobile-nav-button";
+  btn.innerHTML = `<span>${escapeHtml(label)}</span>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}`;
+  applyMobileDataset(btn, target);
+  return btn;
+}
+
+function applyMobileDataset(element, target) {
+  element.dataset.mobileView = target.view;
+  if (target.date) element.dataset.mobileDate = target.date;
+  if (target.prepList) element.dataset.mobilePrepList = target.prepList;
+  if (target.person) element.dataset.mobilePerson = target.person;
+  if (target.city) element.dataset.mobileCity = target.city;
+}
+
+function formatMobileDate(date) {
+  const formatted = formatter.format(parseDate(date));
+  const [weekday, rest] = formatted.split(", ");
+  return `${weekday} ${rest || ""}`.trim();
+}
+
+function personName(id) {
+  return personOptions().find((person) => person.id === id)?.name || "Shared";
 }
 
 function renderItem(item) {
@@ -955,10 +1182,11 @@ function addPrepItem(listName, values) {
   savePrepState();
   syncPrepItem(listName, item);
   renderPrepLists();
+  renderMobileNavigation();
 }
 
 function renderBucketInsertControls(item) {
-  return button("Schedule", () => scheduleBucketItem(item));
+  return button("Add", () => scheduleBucketItem(item));
 }
 
 function scheduleBucketItem(item) {
@@ -1005,6 +1233,7 @@ function updatePrepItem(listName, id, changes) {
   savePrepState();
   if (updated) syncPrepItem(listName, updated);
   renderPrepLists();
+  renderMobileNavigation();
 }
 
 function removePrepItem(listName, id) {
@@ -1012,6 +1241,7 @@ function removePrepItem(listName, id) {
   savePrepState();
   deleteRemotePrepItem(id);
   renderPrepLists();
+  renderMobileNavigation();
 }
 
 function renderCustomItemEditor(item) {
