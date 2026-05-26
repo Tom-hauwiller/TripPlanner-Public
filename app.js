@@ -535,6 +535,7 @@ function renderDetails(item) {
     ["Destination", item.destination],
     ["Address", item.address],
     ["Phone", item.phone],
+    ["Confirmation", item.confirmationNumber],
     ["Priority", item.priority],
     ["Starts", formatDateTime(item.start)],
     ["Ends", formatDateTime(item.end)]
