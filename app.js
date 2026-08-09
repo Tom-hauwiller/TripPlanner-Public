@@ -237,6 +237,7 @@ function allItineraryItems() {
 
 function renderTimeline(groups) {
   els.timeline.innerHTML = "";
+  if (state.canEdit) els.timeline.append(renderTripItemCreatePanel());
   const dates = Object.keys(groups).sort();
   if (!dates.length) {
     els.timeline.append(emptyState("No items match these filters."));
@@ -575,8 +576,8 @@ function renderDetails(item) {
     wrapper.append(links);
   }
 
-  if (item.source === "custom" && state.canEdit) {
-    wrapper.append(renderCustomItemEditor(item));
+  if (state.canEdit) {
+    wrapper.append(item.source === "custom" ? renderCustomItemEditor(item) : renderTripItemEditor(item));
   }
 
   return wrapper;
@@ -949,6 +950,37 @@ async function deleteRemotePrepItem(id) {
   if (error) setSyncStatus(`Delete sync failed: ${error.message}`);
 }
 
+async function syncTripItem(item) {
+  if (!state.supabase || !state.session || state.readOnly) return false;
+  const { error } = await state.supabase.from("trip_items").upsert(tripItemRow(item));
+  if (error) {
+    setSyncStatus(`Itinerary sync failed: ${error.message}`);
+    return false;
+  }
+  setSyncStatus("Itinerary item saved.");
+  return true;
+}
+
+async function deleteRemoteTripItem(id) {
+  if (!state.supabase || !state.session || state.readOnly) return false;
+  const { error } = await state.supabase.from("trip_items").delete().eq("id", id).eq("trip_slug", supabaseConfig().tripSlug);
+  if (error) {
+    setSyncStatus(`Itinerary delete failed: ${error.message}`);
+    return false;
+  }
+  setSyncStatus("Itinerary item deleted.");
+  return true;
+}
+
+function tripItemRow(item) {
+  return {
+    id: item.id,
+    trip_slug: supabaseConfig().tripSlug,
+    sort_start: item.start,
+    payload: item
+  };
+}
+
 function prepItemIndex(listName, id) {
   return state.prep[listName].findIndex((item) => item.id === id);
 }
@@ -1243,6 +1275,152 @@ function removePrepItem(listName, id) {
   deleteRemotePrepItem(id);
   renderPrepLists();
   renderMobileNavigation();
+}
+
+function renderTripItemCreatePanel() {
+  const panel = document.createElement("article");
+  panel.className = "item-card itinerary-create-card";
+  const time = document.createElement("div");
+  time.className = "time";
+  time.textContent = "New";
+  const main = document.createElement("div");
+  main.className = "item-main";
+  const heading = document.createElement("div");
+  heading.className = "item-top";
+  heading.innerHTML = `<div><h3 class="item-title">Add itinerary item</h3></div>`;
+  const form = renderTripItemForm(newTripItemDraft(), {
+    submitLabel: "Add",
+    onSubmit: async (draft) => {
+      const saved = await syncTripItem(draft);
+      if (saved) {
+        state.data.items.push(draft);
+        normalizeData(state.data);
+      }
+      populateStaticSections();
+      render();
+    }
+  });
+  main.append(heading, form);
+  panel.append(time, main);
+  return panel;
+}
+
+function renderTripItemEditor(item) {
+  return renderTripItemForm(item, {
+    submitLabel: "Save itinerary",
+    deleteLabel: "Delete itinerary item",
+    onSubmit: async (draft) => {
+      const saved = await syncTripItem(draft);
+      if (saved) {
+        state.data.items = state.data.items.map((existing) => existing.id === item.id ? draft : existing);
+        normalizeData(state.data);
+        populateStaticSections();
+        render();
+      }
+    },
+    onDelete: async () => {
+      if (!confirm(`Delete "${item.title}" from the base itinerary?`)) return;
+      const deleted = await deleteRemoteTripItem(item.id);
+      if (deleted) {
+        state.data.items = state.data.items.filter((existing) => existing.id !== item.id);
+        populateStaticSections();
+        render();
+      }
+    }
+  });
+}
+
+function renderTripItemForm(item, options) {
+  const form = document.createElement("form");
+  form.className = "trip-item-form";
+  form.innerHTML = `
+    <label><span>Title</span><input name="title" type="text" value="${escapeHtml(item.title || "")}" required></label>
+    <label><span>City</span><input name="city" type="text" value="${escapeHtml(item.city || "")}" required></label>
+    <label><span>Type</span><select name="type"></select></label>
+    <label><span>Mode</span><select name="mode"></select></label>
+    <label><span>Start</span><input name="start" type="datetime-local" value="${escapeHtml(toDateTimeLocalValue(item.start))}" required></label>
+    <label><span>End</span><input name="end" type="datetime-local" value="${escapeHtml(toDateTimeLocalValue(item.end))}"></label>
+    <label><span>Status</span><select name="status"></select></label>
+    <label><span>Operator</span><input name="operator" type="text" value="${escapeHtml(item.operator || "")}"></label>
+    <label><span>Origin</span><input name="origin" type="text" value="${escapeHtml(item.origin || "")}"></label>
+    <label><span>Destination</span><input name="destination" type="text" value="${escapeHtml(item.destination || "")}"></label>
+    <label><span>Address</span><input name="address" type="text" value="${escapeHtml(item.address || "")}"></label>
+    <label><span>Map query</span><input name="mapQuery" type="text" value="${escapeHtml(item.mapQuery || "")}"></label>
+    <label><span>Display note</span><input name="displayTimeNote" type="text" value="${escapeHtml(item.displayTimeNote || "")}"></label>
+    <label><span>Priority</span><input name="priority" type="text" value="${escapeHtml(item.priority || "")}"></label>
+    <label class="wide"><span>Summary</span><textarea name="summary" rows="2">${escapeHtml(item.summary || "")}</textarea></label>
+    <label class="wide"><span>Notes</span><textarea name="notes" rows="5">${escapeHtml((item.notes || []).join("\n"))}</textarea></label>
+    <div class="form-actions wide">
+      <button class="icon-button" type="submit">${escapeHtml(options.submitLabel || "Save")}</button>
+    </div>
+  `;
+
+  setSelectOptions(form.elements.type, ["transport", "lodging", "stop", "wishlist"], item.type || "stop");
+  setSelectOptions(form.elements.mode, ["", "flight", "train", "car", "walk", "transit"], item.mode || "");
+  setSelectOptions(form.elements.status, ["confirmed", "planned", "wishlist"], item.status || "planned");
+
+  if (options.onDelete) {
+    const deleteButton = button(options.deleteLabel || "Delete", options.onDelete);
+    deleteButton.classList.add("danger");
+    form.querySelector(".form-actions").append(deleteButton);
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    options.onSubmit(tripItemFromForm(item, form));
+  });
+
+  return form;
+}
+
+function tripItemFromForm(original, form) {
+  const draft = { ...original };
+  draft.id = original.id || `trip-${Date.now()}`;
+  draft.title = form.elements.title.value.trim();
+  draft.city = form.elements.city.value.trim();
+  draft.type = form.elements.type.value;
+  draft.status = form.elements.status.value;
+  draft.start = form.elements.start.value;
+  draft.end = form.elements.end.value || "";
+  draft.summary = form.elements.summary.value.trim();
+  draft.notes = form.elements.notes.value.split(/\r?\n/).map((note) => note.trim()).filter(Boolean);
+  setOptionalField(draft, "mode", form.elements.mode.value);
+  setOptionalField(draft, "operator", form.elements.operator.value);
+  setOptionalField(draft, "origin", form.elements.origin.value);
+  setOptionalField(draft, "destination", form.elements.destination.value);
+  setOptionalField(draft, "address", form.elements.address.value);
+  setOptionalField(draft, "mapQuery", form.elements.mapQuery.value);
+  setOptionalField(draft, "displayTimeNote", form.elements.displayTimeNote.value);
+  setOptionalField(draft, "priority", form.elements.priority.value);
+  return draft;
+}
+
+function newTripItemDraft() {
+  const startDate = state.filters.date !== "all" ? state.filters.date : state.data.trip?.startDate || "2026-08-10";
+  const start = `${startDate}T10:00`;
+  return {
+    id: `trip-${Date.now()}`,
+    type: "stop",
+    status: "planned",
+    title: "",
+    city: state.filters.city !== "all" ? state.filters.city : "",
+    start,
+    end: addMinutesToLocalInput(start, 60),
+    summary: "",
+    notes: []
+  };
+}
+
+function setOptionalField(target, key, value) {
+  const trimmed = String(value || "").trim();
+  if (trimmed) target[key] = trimmed;
+  else delete target[key];
+}
+
+function setSelectOptions(select, values, selected) {
+  select.innerHTML = "";
+  values.forEach((value) => select.append(new Option(value || "None", value)));
+  select.value = selected;
 }
 
 function renderCustomItemEditor(item) {

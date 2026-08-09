@@ -645,6 +645,63 @@ select {
   align-items: center;
 }
 
+.trip-item-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+
+.itinerary-create-card .trip-item-form {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.trip-item-form label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trip-item-form label span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.trip-item-form .wide,
+.trip-item-form .form-actions {
+  grid-column: 1 / -1;
+}
+
+.trip-item-form input,
+.trip-item-form select,
+.trip-item-form textarea {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--ink);
+  font: inherit;
+}
+
+.trip-item-form textarea {
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .custom-item-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 12px;
@@ -863,6 +920,7 @@ code {
 
   .add-form,
   .auth-form,
+  .trip-item-form,
   .custom-item-form {
     grid-template-columns: 1fr;
   }
