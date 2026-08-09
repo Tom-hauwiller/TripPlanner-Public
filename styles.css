@@ -654,7 +654,31 @@ select {
   padding-top: 12px;
 }
 
-.itinerary-create-card .trip-item-form {
+.edit-disclosure {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+
+.edit-disclosure.editing {
+  margin-bottom: 2px;
+}
+
+.itinerary-create-card {
+  border-style: dashed;
+}
+
+.itinerary-create-card .item-top {
+  margin-bottom: 0;
+}
+
+.itinerary-create-card.editing .item-top {
+  margin-bottom: 12px;
+}
+
+.itinerary-create-card .trip-item-form,
+.edit-disclosure .trip-item-form,
+.edit-disclosure .custom-item-form {
   margin-top: 0;
   border-top: 0;
   padding-top: 0;

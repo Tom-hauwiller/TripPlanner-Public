@@ -237,28 +237,28 @@ function allItineraryItems() {
 
 function renderTimeline(groups) {
   els.timeline.innerHTML = "";
-  if (state.canEdit) els.timeline.append(renderTripItemCreatePanel());
   const dates = Object.keys(groups).sort();
   if (!dates.length) {
     els.timeline.append(emptyState("No items match these filters."));
-    return;
+  } else {
+    dates.forEach((date) => {
+      const group = document.createElement("article");
+      group.className = "day-group";
+
+      const header = document.createElement("header");
+      header.className = "day-header";
+      header.innerHTML = `<h2>${escapeHtml(longFormatter.format(parseDate(date)))}</h2><span class="day-count">${groups[date].length} items</span>`;
+      group.append(header);
+
+      const list = document.createElement("div");
+      list.className = "item-list";
+      groups[date].forEach((item) => list.append(renderItem(item)));
+      group.append(list);
+      els.timeline.append(group);
+    });
   }
 
-  dates.forEach((date) => {
-    const group = document.createElement("article");
-    group.className = "day-group";
-
-    const header = document.createElement("header");
-    header.className = "day-header";
-    header.innerHTML = `<h2>${escapeHtml(longFormatter.format(parseDate(date)))}</h2><span class="day-count">${groups[date].length} items</span>`;
-    group.append(header);
-
-    const list = document.createElement("div");
-    list.className = "item-list";
-    groups[date].forEach((item) => list.append(renderItem(item)));
-    group.append(list);
-    els.timeline.append(group);
-  });
+  if (state.canEdit) els.timeline.append(renderTripItemCreatePanel());
 }
 
 function handleMobileNavClick(event) {
@@ -577,7 +577,7 @@ function renderDetails(item) {
   }
 
   if (state.canEdit) {
-    wrapper.append(item.source === "custom" ? renderCustomItemEditor(item) : renderTripItemEditor(item));
+    wrapper.append(renderItemEditDisclosure(item));
   }
 
   return wrapper;
@@ -1288,6 +1288,13 @@ function renderTripItemCreatePanel() {
   const heading = document.createElement("div");
   heading.className = "item-top";
   heading.innerHTML = `<div><h3 class="item-title">Add itinerary item</h3></div>`;
+  const reveal = button("Add", () => {
+    panel.classList.add("editing");
+    reveal.hidden = true;
+    form.hidden = false;
+    form.elements.title.focus();
+  });
+  heading.append(reveal);
   const form = renderTripItemForm(newTripItemDraft(), {
     submitLabel: "Add",
     onSubmit: async (draft) => {
@@ -1300,9 +1307,25 @@ function renderTripItemCreatePanel() {
       render();
     }
   });
+  form.hidden = true;
   main.append(heading, form);
   panel.append(time, main);
   return panel;
+}
+
+function renderItemEditDisclosure(item) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "edit-disclosure";
+  const editButton = button("Edit", () => {
+    editButton.hidden = true;
+    editor.hidden = false;
+    wrapper.classList.add("editing");
+    editor.querySelector("input, select, textarea")?.focus();
+  });
+  const editor = item.source === "custom" ? renderCustomItemEditor(item) : renderTripItemEditor(item);
+  editor.hidden = true;
+  wrapper.append(editButton, editor);
+  return wrapper;
 }
 
 function renderTripItemEditor(item) {
