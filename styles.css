@@ -654,6 +654,11 @@ select {
   padding-top: 12px;
 }
 
+.trip-item-form[hidden],
+.custom-item-form[hidden] {
+  display: none !important;
+}
+
 .edit-disclosure {
   margin-top: 12px;
   border-top: 1px dashed var(--line);
